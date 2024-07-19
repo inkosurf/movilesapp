@@ -3,6 +3,9 @@
 <head>
   <title>Registro de Charcos</title>
   <script>
+    // URL del Google Apps Script (deberías reemplazar con tu URL)
+    const SCRIPT_URL = 'https://script.google.com/macros/s/your-script-id/exec';
+
     function registrarDatos() {
       navigator.geolocation.getCurrentPosition(function(position) {
         const latitud = position.coords.latitude;
@@ -39,9 +42,33 @@
       }
     }
 
+    function enviarDatos() {
+      if (navigator.onLine) {
+        let registros = localStorage.getItem('registros');
+        if (registros) {
+          registros = JSON.parse(registros);
+          registros.forEach((registro) => {
+            fetch(SCRIPT_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ data: registro }),
+            }).then(response => response.text())
+              .then(result => console.log('Data sent:', result))
+              .catch(error => console.error('Error sending data:', error));
+          });
+          localStorage.removeItem('registros');
+        }
+      } else {
+        console.log('No internet connection.');
+      }
+    }
+
     window.onload = function() {
       mostrarDatos();
       document.getElementById('registrar').onclick = registrarDatos;
+      enviarDatos(); // Intentar enviar los datos cuando se carga la página
     };
   </script>
 </head>
