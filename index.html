@@ -1,15 +1,53 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi PWA</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Registro de Charcos</title>
+  <script>
+    function registrarDatos() {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const latitud = position.coords.latitude;
+        const longitud = position.coords.longitude;
+        const fechaHora = new Date().toLocaleString();
+        const datos = `${fechaHora}, teta, ${latitud}, ${longitud}`;
+
+        // Guarda los datos en localStorage
+        let registros = localStorage.getItem('registros');
+        if (!registros) {
+          registros = [];
+        } else {
+          registros = JSON.parse(registros);
+        }
+        registros.push(datos);
+        localStorage.setItem('registros', JSON.stringify(registros));
+
+        alert('Datos registrados correctamente.');
+        window.location.reload();
+      });
+    }
+
+    function mostrarDatos() {
+      let registros = localStorage.getItem('registros');
+      if (registros) {
+        registros = JSON.parse(registros);
+        const lista = document.getElementById('lista-registros');
+        lista.innerHTML = '';
+        registros.forEach((registro) => {
+          const li = document.createElement('li');
+          li.textContent = registro;
+          lista.appendChild(li);
+        });
+      }
+    }
+
+    window.onload = function() {
+      mostrarDatos();
+      document.getElementById('registrar').onclick = registrarDatos;
+    };
+  </script>
 </head>
 <body>
-  <h1>Mi Aplicación Web Progresiva</h1>
-  <button onclick="registrarDatos()">Registrar Datos</button>
-  <script src="app.js"></script>
+  <h1>Registro de Charcos</h1>
+  <button id="registrar">Registrar Ubicación</button>
+  <ul id="lista-registros"></ul>
 </body>
 </html>
-
