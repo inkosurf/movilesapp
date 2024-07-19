@@ -42,29 +42,28 @@
       }
     }
 
-    function enviarDatos() {
-      if (navigator.onLine) {
-        let registros = localStorage.getItem('registros');
-        if (registros) {
-          registros = JSON.parse(registros);
-          registros.forEach((registro) => {
-            fetch(SCRIPT_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ data: registro }),
-            }).then(response => response.text())
-              .then(result => console.log('Data sent:', result))
-              .catch(error => console.error('Error sending data:', error));
-          });
-          localStorage.removeItem('registros');
-        }
-      } else {
-        console.log('No internet connection.');
-      }
+   function enviarDatos() {
+  if (navigator.onLine) {
+    let registros = localStorage.getItem('registros');
+    if (registros) {
+      registros = JSON.parse(registros);
+      registros.forEach((registro) => {
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: registro }),
+        }).then(response => response.text())
+          .then(result => console.log('Data sent:', result))
+          .catch(error => console.error('Error sending data:', error));
+      });
+      localStorage.removeItem('registros');
     }
-
+  } else {
+    console.log('No internet connection.');
+  }
+}
     window.onload = function() {
       mostrarDatos();
       document.getElementById('registrar').onclick = registrarDatos;
