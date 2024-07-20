@@ -3,50 +3,96 @@
 <head>
   <title>Modificar datos.txt</title>
   <script>
-    function inicializarArchivo() {
-      if (!localStorage.getItem('datos')) {
-        localStorage.setItem('datos', 'teta'); // Crear contenido inicial si no existe
-      }
+    let db;
+
+    // Función para inicializar IndexedDB
+    function inicializarDB() {
+      const request = indexedDB.open('datosDB', 1);
+
+      request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        const objectStore = db.createObjectStore('datos', { keyPath: 'id', autoIncrement: true });
+      };
+
+      request.onsuccess = function(event) {
+        db = event.target.result;
+        leerYActualizarArchivo();
+      };
+
+      request.onerror = function(event) {
+        console.error('Error al abrir IndexedDB: ', event.target.errorCode);
+      };
     }
 
+    // Función para guardar datos en IndexedDB
+    function guardarDatos(fechaHora, latitud, longitud) {
+      const transaction = db.transaction(['datos'], 'readwrite');
+      const objectStore = transaction.objectStore('datos');
+
+      const data = {
+        fechaHora: fechaHora,
+        teta: 'teta',
+        latitud: latitud,
+        longitud: longitud
+      };
+
+      objectStore.add(data);
+
+      transaction.oncomplete = function() {
+        console.log('Datos guardados correctamente.');
+        descargarArchivo();
+      };
+
+      transaction.onerror = function(event) {
+        console.error('Error al guardar los datos: ', event.target.errorCode);
+      };
+    }
+
+    // Función para leer y actualizar datos
     function leerYActualizarArchivo() {
       navigator.geolocation.getCurrentPosition(function(position) {
         const fechaHora = new Date().toLocaleString();
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
-        const contenidoAnterior = localStorage.getItem('datos');
-        const nuevoContenido = `${contenidoAnterior}\nFecha/Hora: ${fechaHora}, Teta: teta, Latitud: ${latitud}, Longitud: ${longitud}`;
-        
-        localStorage.setItem('datos', nuevoContenido); // Guardar en localStorage
-        
-        // Descargar el archivo automáticamente después de actualizarlo
-        descargarArchivo();
+        guardarDatos(fechaHora, latitud, longitud);
       }, function(error) {
         console.error('Error al obtener la ubicación: ', error);
         alert('No se pudo obtener la ubicación. Por favor, intente nuevamente.');
       });
     }
 
+    // Función para descargar el archivo
     function descargarArchivo() {
-      let contenido = localStorage.getItem('datos');
-      const blob = new Blob([contenido], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
+      const transaction = db.transaction(['datos'], 'readonly');
+      const objectStore = transaction.objectStore('datos');
+      const request = objectStore.getAll();
 
-      // Crear un enlace invisible para descargar el archivo
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'datos.txt'; // Nombre del archivo a crear/actualizar
-      document.body.appendChild(a);
-      a.style.display = 'none';
-      a.click();
+      request.onsuccess = function(event) {
+        const datos = event.target.result;
+        const contenido = datos.map(d => `Fecha/Hora: ${d.fechaHora}, Teta: ${d.teta}, Latitud: ${d.latitud}, Longitud: ${d.longitud}`).join('\n');
+        const blob = new Blob([contenido], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
 
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+        // Crear un enlace invisible para descargar el archivo
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'datos.txt'; // Nombre del archivo a crear/actualizar
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        a.click();
+
+        // Limpiar después de la descarga
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      };
+
+      request.onerror = function(event) {
+        console.error('Error al leer los datos: ', event.target.errorCode);
+      };
     }
 
     window.onload = function() {
-      inicializarArchivo();
-      leerYActualizarArchivo(); // Actualizar y descargar el archivo al cargar la página
+      inicializarDB(); // Inicializar la base de datos al cargar la página
     };
   </script>
 </head>
@@ -55,3 +101,4 @@
   <p>Los datos se actualizarán automáticamente y se descargará el archivo actualizado.</p>
 </body>
 </html>
+
