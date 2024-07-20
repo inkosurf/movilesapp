@@ -3,10 +3,7 @@
 <head>
   <title>Registro de Charcos</title>
   <script>
-    // URL del PHP en tu servidor
-    const PHP_URL = 'https://iassa-sa.com.ar/movilesapp/PWA/guardar_datos_centro1.php';
-
-    function registrarDatos() {
+    async function registrarDatos() {
       navigator.geolocation.getCurrentPosition(function(position) {
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
@@ -47,43 +44,49 @@
       }
     }
 
-    function enviarDatos() {
-      if (navigator.onLine) {
-        let registros = localStorage.getItem('registros');
-        if (registros) {
-          registros = JSON.parse(registros);
-          registros.forEach((registro) => {
-            const formData = new FormData();
-            formData.append('fechahora1', registro.fechahora1);
-            formData.append('latitud', registro.latitud);
-            formData.append('longitud', registro.longitud);
-            formData.append('nombre', registro.nombre);
+    async function guardarDatosEnArchivo() {
+      let registros = localStorage.getItem('registros');
+      if (registros) {
+        registros = JSON.parse(registros);
+        const texto = registros.map(registro => 
+          `${registro.fechahora1}, ${registro.nombre}, ${registro.latitud}, ${registro.longitud}`
+        ).join('\n');
 
-            fetch(PHP_URL, {
-              method: 'POST',
-              body: formData
-            })
-              .then(response => response.text())
-              .then(result => console.log('Datos enviados:', result))
-              .catch(error => console.error('Error enviando los datos:', error));
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'registros.txt',
+            types: [{
+              description: 'Text Files',
+              accept: {'text/plain': ['.txt']}
+            }]
           });
+
+          const writableStream = await fileHandle.createWritable();
+          await writableStream.write(texto);
+          await writableStream.close();
+
+          // Limpiar los registros después de guardar
           localStorage.removeItem('registros');
+          alert('Datos guardados correctamente en el archivo.');
+        } catch (error) {
+          console.error('Error guardando el archivo:', error);
         }
       } else {
-        console.log('No hay conexión a internet.');
+        console.log('No hay registros para guardar.');
       }
     }
 
     window.onload = function() {
       mostrarDatos();
       document.getElementById('registrar').onclick = registrarDatos;
-      enviarDatos(); // Intentar enviar los datos cuando se carga la página
+      document.getElementById('guardar').onclick = guardarDatosEnArchivo;
     };
   </script>
 </head>
 <body>
   <h1>Registro de Charcos</h1>
   <button id="registrar">Registrar Ubicación</button>
+  <button id="guardar">Guardar Datos en Archivo</button>
   <ul id="lista-registros"></ul>
 </body>
 </html>
