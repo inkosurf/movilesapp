@@ -3,15 +3,21 @@
 <head>
   <title>Registro de Charcos</title>
   <script>
-    // URL del Google Apps Script (reemplaza con tu URL)
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzx185GkQLjRsZ0_F9u8zFpzlgg30UfGryNcWkvDpdfMpjRV3f5pUD0EM3h9PUpa6-/exec';
+    // URL del PHP en tu servidor
+    const PHP_URL = 'https://iassa-sa.com.ar/movilesapp/PWA/guardar_datos.php';
 
     function registrarDatos() {
       navigator.geolocation.getCurrentPosition(function(position) {
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
         const fechaHora = new Date().toLocaleString();
-        const datos = `${fechaHora}, teta, ${latitud}, ${longitud}`;
+        const datos = {
+          fechahora1: fechaHora,
+          latitud: latitud,
+          longitud: longitud,
+          nombre: 'nombre',  // Ajusta esto según tus necesidades
+          descripcion: 'descripcion'  // Ajusta esto según tus necesidades
+        };
 
         // Guarda los datos en localStorage
         let registros = localStorage.getItem('registros');
@@ -36,32 +42,35 @@
         lista.innerHTML = '';
         registros.forEach((registro) => {
           const li = document.createElement('li');
-          li.textContent = registro;
+          li.textContent = `${registro.fechahora1}, ${registro.latitud}, ${registro.longitud}`;
           lista.appendChild(li);
         });
       }
     }
 
-   function enviarDatos() {
-  if (navigator.onLine) {
-    let registros = localStorage.getItem('registros');
-    if (registros) {
-      registros = JSON.parse(registros);
-      registros.forEach((registro) => {
-        // Construir URL con parámetros de consulta
-        const url = `https://script.google.com/macros/s/AKfycbxyrEAUNiZlH3kSZ9B0P6IwzaBbVvJeWAUycDR1qLmM-WiQfFCnaCVLs6SK-3g67eYz/exec?latitud=${encodeURIComponent(registro.latitud)}&longitud=${encodeURIComponent(registro.longitud)}&fechaHora=${encodeURIComponent(registro.fechaHora)}&nombre=${encodeURIComponent(registro.nombre)}`;
-        
-        fetch(url)
-          .then(response => response.text())
-          .then(result => console.log('Data sent:', result))
-          .catch(error => console.error('Error sending data:', error));
-      });
-      localStorage.removeItem('registros');
+    function enviarDatos() {
+      if (navigator.onLine) {
+        let registros = localStorage.getItem('registros');
+        if (registros) {
+          registros = JSON.parse(registros);
+          registros.forEach((registro) => {
+            fetch(PHP_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams(registro)
+            })
+            .then(response => response.text())
+            .then(result => console.log('Data sent:', result))
+            .catch(error => console.error('Error sending data:', error));
+          });
+          localStorage.removeItem('registros');
+        }
+      } else {
+        console.log('No internet connection.');
+      }
     }
-  } else {
-    console.log('No internet connection.');
-  }
-}
 
     window.onload = function() {
       mostrarDatos();
@@ -76,3 +85,5 @@
   <ul id="lista-registros"></ul>
 </body>
 </html>
+
+
