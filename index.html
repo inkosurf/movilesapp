@@ -1,94 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Registro de Charcos</title>
+  <title>Modificar datos.txt</title>
   <script>
-    async function registrarDatos() {
+    function inicializarArchivo() {
+      if (!localStorage.getItem('datos')) {
+        localStorage.setItem('datos', ''); // Crear contenido inicial si no existe
+      }
+    }
+
+    function registrarUbicacion() {
       navigator.geolocation.getCurrentPosition(function(position) {
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
         const fechaHora = new Date().toLocaleString();
-        const datos = {
-          fechahora1: fechaHora,
-          latitud: latitud,
-          longitud: longitud,
-          nombre: 'teta'  // Ajusta esto según el valor de la zona
-        };
+        const nuevoRegistro = `Fecha/Hora: ${fechaHora}, teta, Latitud: ${latitud}, Longitud: ${longitud}\n`;
 
-        // Guarda los datos en localStorage
-        let registros = localStorage.getItem('registros');
-        if (!registros) {
-          registros = [];
-        } else {
-          registros = JSON.parse(registros);
-        }
-        registros.push(datos);
-        localStorage.setItem('registros', JSON.stringify(registros));
+        let contenidoAnterior = localStorage.getItem('datos');
+        let nuevoContenido = contenidoAnterior + nuevoRegistro;
+        localStorage.setItem('datos', nuevoContenido);
 
-        alert('Datos registrados correctamente.');
-        window.location.reload();
+        alert('Archivo actualizado. Nuevo contenido:\n' + nuevoContenido);
       });
     }
 
-    function mostrarDatos() {
-      let registros = localStorage.getItem('registros');
-      if (registros) {
-        registros = JSON.parse(registros);
-        const lista = document.getElementById('lista-registros');
-        lista.innerHTML = '';
-        registros.forEach((registro) => {
-          const li = document.createElement('li');
-          li.textContent = `${registro.fechahora1}, ${registro.nombre}, ${registro.latitud}, ${registro.longitud}`;
-          lista.appendChild(li);
-        });
-      }
+    function descargarArchivo() {
+      let contenido = localStorage.getItem('datos');
+      const blob = new Blob([contenido], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'datos.txt'; // Nombre del archivo a crear/actualizar
+      document.body.appendChild(a);
+      a.style.display = 'none';
+      a.click();
+
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     }
-
-    async function guardarDatosEnArchivo() {
-      let registros = localStorage.getItem('registros');
-      if (registros) {
-        registros = JSON.parse(registros);
-        const texto = registros.map(registro => 
-          `${registro.fechahora1}, ${registro.nombre}, ${registro.latitud}, ${registro.longitud}`
-        ).join('\n');
-
-        try {
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'registros.txt',
-            types: [{
-              description: 'Text Files',
-              accept: {'text/plain': ['.txt']}
-            }]
-          });
-
-          const writableStream = await fileHandle.createWritable();
-          await writableStream.write(texto);
-          await writableStream.close();
-
-          // Limpiar los registros después de guardar
-          localStorage.removeItem('registros');
-          alert('Datos guardados correctamente en el archivo.');
-        } catch (error) {
-          console.error('Error guardando el archivo:', error);
-        }
-      } else {
-        console.log('No hay registros para guardar.');
-      }
-    }
-
-    window.onload = function() {
-      mostrarDatos();
-      document.getElementById('registrar').onclick = registrarDatos;
-      document.getElementById('guardar').onclick = guardarDatosEnArchivo;
-    };
   </script>
 </head>
-<body>
-  <h1>Registro de Charcos</h1>
-  <button id="registrar">Registrar Ubicación</button>
-  <button id="guardar">Guardar Datos en Archivo</button>
-  <ul id="lista-registros"></ul>
+<body onload="inicializarArchivo()">
+  <h1>Modificar datos.txt</h1>
+  <button onclick="registrarUbicacion()">Registrar Ubicación</button>
+  <button onclick="descargarArchivo()">Descargar archivo</button>
 </body>
 </html>
-
-
