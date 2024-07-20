@@ -5,22 +5,25 @@
   <script>
     function inicializarArchivo() {
       if (!localStorage.getItem('datos')) {
-        localStorage.setItem('datos', ''); // Crear contenido inicial si no existe
+        localStorage.setItem('datos', 'teta'); // Crear contenido inicial si no existe
       }
     }
 
-    function registrarUbicacion() {
+    function leerYActualizarArchivo() {
       navigator.geolocation.getCurrentPosition(function(position) {
+        const fechaHora = new Date().toLocaleString();
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
-        const fechaHora = new Date().toLocaleString();
-        const nuevoRegistro = `Fecha/Hora: ${fechaHora}, teta, Latitud: ${latitud}, Longitud: ${longitud}\n`;
-
-        let contenidoAnterior = localStorage.getItem('datos');
-        let nuevoContenido = contenidoAnterior + nuevoRegistro;
-        localStorage.setItem('datos', nuevoContenido);
-
-        alert('Archivo actualizado. Nuevo contenido:\n' + nuevoContenido);
+        const contenidoAnterior = localStorage.getItem('datos');
+        const nuevoContenido = `${contenidoAnterior}\nFecha/Hora: ${fechaHora}, Teta: teta, Latitud: ${latitud}, Longitud: ${longitud}`;
+        
+        localStorage.setItem('datos', nuevoContenido); // Guardar en localStorage
+        
+        // Descargar el archivo automáticamente después de actualizarlo
+        descargarArchivo();
+      }, function(error) {
+        console.error('Error al obtener la ubicación: ', error);
+        alert('No se pudo obtener la ubicación. Por favor, intente nuevamente.');
       });
     }
 
@@ -29,6 +32,7 @@
       const blob = new Blob([contenido], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
 
+      // Crear un enlace invisible para descargar el archivo
       const a = document.createElement('a');
       a.href = url;
       a.download = 'datos.txt'; // Nombre del archivo a crear/actualizar
@@ -39,11 +43,15 @@
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     }
+
+    window.onload = function() {
+      inicializarArchivo();
+      leerYActualizarArchivo(); // Actualizar y descargar el archivo al cargar la página
+    };
   </script>
 </head>
-<body onload="inicializarArchivo()">
+<body>
   <h1>Modificar datos.txt</h1>
-  <button onclick="registrarUbicacion()">Registrar Ubicación</button>
-  <button onclick="descargarArchivo()">Descargar archivo</button>
+  <p>Los datos se actualizarán automáticamente y se descargará el archivo actualizado.</p>
 </body>
 </html>
