@@ -1,104 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Modificar datos.txt</title>
+  <title>Registro de Ubicación</title>
   <script>
-    let db;
+    // Configuración inicial
+    const ZONA = 'centro1'; // Ajusta el nombre de la zona aquí
 
-    // Función para inicializar IndexedDB
-    function inicializarDB() {
-      const request = indexedDB.open('datosDB', 1);
-
-      request.onupgradeneeded = function(event) {
-        db = event.target.result;
-        const objectStore = db.createObjectStore('datos', { keyPath: 'id', autoIncrement: true });
-      };
-
-      request.onsuccess = function(event) {
-        db = event.target.result;
-        leerYActualizarArchivo();
-      };
-
-      request.onerror = function(event) {
-        console.error('Error al abrir IndexedDB: ', event.target.errorCode);
-      };
-    }
-
-    // Función para guardar datos en IndexedDB
-    function guardarDatos(fechaHora, latitud, longitud) {
-      const transaction = db.transaction(['datos'], 'readwrite');
-      const objectStore = transaction.objectStore('datos');
-
-      const data = {
-        fechaHora: fechaHora,
-        teta: 'teta',
-        latitud: latitud,
-        longitud: longitud
-      };
-
-      objectStore.add(data);
-
-      transaction.oncomplete = function() {
-        console.log('Datos guardados correctamente.');
-        descargarArchivo();
-      };
-
-      transaction.onerror = function(event) {
-        console.error('Error al guardar los datos: ', event.target.errorCode);
-      };
-    }
-
-    // Función para leer y actualizar datos
-    function leerYActualizarArchivo() {
+    function registrarDatos() {
       navigator.geolocation.getCurrentPosition(function(position) {
-        const fechaHora = new Date().toLocaleString();
         const latitud = position.coords.latitude;
         const longitud = position.coords.longitude;
-        guardarDatos(fechaHora, latitud, longitud);
-      }, function(error) {
-        console.error('Error al obtener la ubicación: ', error);
-        alert('No se pudo obtener la ubicación. Por favor, intente nuevamente.');
+        const fechaHora = new Date().toLocaleString();
+        const datos = {
+          fechaHora: fechaHora,
+          latitud: latitud,
+          longitud: longitud,
+          zona: ZONA
+        };
+
+        // Guarda los datos en localStorage
+        let registros = localStorage.getItem('registros');
+        if (!registros) {
+          registros = [];
+        } else {
+          registros = JSON.parse(registros);
+        }
+        registros.push(datos);
+        localStorage.setItem('registros', JSON.stringify(registros));
+
+        alert('Datos registrados correctamente.');
+        enviarDatos(); // Intentar enviar los datos inmediatamente
       });
     }
 
-    // Función para descargar el archivo
-    function descargarArchivo() {
-      const transaction = db.transaction(['datos'], 'readonly');
-      const objectStore = transaction.objectStore('datos');
-      const request = objectStore.getAll();
+    function enviarDatos() {
+      if (navigator.onLine) {
+        let registros = localStorage.getItem('registros');
+        if (registros) {
+          registros = JSON.parse(registros);
+          registros.forEach((registro) => {
+            const formData = new FormData();
+            formData.append('fechaHora', registro.fechaHora);
+            formData.append('latitud', registro.latitud);
+            formData.append('longitud', registro.longitud);
+            formData.append('zona', registro.zona);
 
-      request.onsuccess = function(event) {
-        const datos = event.target.result;
-        const contenido = datos.map(d => `Fecha/Hora: ${d.fechaHora}, Teta: ${d.teta}, Latitud: ${d.latitud}, Longitud: ${d.longitud}`).join('\n');
-        const blob = new Blob([contenido], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-
-        // Crear un enlace invisible para descargar el archivo
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'datos.txt'; // Nombre del archivo a crear/actualizar
-        document.body.appendChild(a);
-        a.style.display = 'none';
-        a.click();
-
-        // Limpiar después de la descarga
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      };
-
-      request.onerror = function(event) {
-        console.error('Error al leer los datos: ', event.target.errorCode);
-      };
+            fetch('https://script.google.com/macros/s/AKfycbzuk53CV8U8GHfwuBX3uh0RpkjSQutnxt1eTHGUMeXRZrqg9f-NIs62Hij9UyOnfr2t/exec', {
+              method: 'POST',
+              body: formData
+            })
+              .then(response => response.text())
+              .then(result => console.log('Datos enviados:', result))
+              .catch(error => console.error('Error enviando los datos:', error));
+          });
+          localStorage.removeItem('registros'); // Limpiar registros después de enviarlos
+        }
+      } else {
+        console.log('No hay conexión a internet.');
+      }
     }
 
     window.onload = function() {
-      inicializarDB(); // Inicializar la base de datos al cargar la página
+      document.getElementById('registrar').onclick = registrarDatos;
+      enviarDatos(); // Intentar enviar los datos cuando se carga la página
     };
   </script>
 </head>
 <body>
-  <h1>Modificar datos.txt</h1>
-  <p>Los datos se actualizarán automáticamente y se descargará el archivo actualizado.</p>
+  <h1>Registro de Ubicación</h1>
+  <button id="registrar">Registrar Ubicación</button>
 </body>
 </html>
 
