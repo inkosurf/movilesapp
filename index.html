@@ -3,7 +3,6 @@
 <head>
   <title>Registro de Ubicación</title>
   <script>
-    // Configuración inicial
     const ZONA = 'centro1'; // Ajusta el nombre de la zona aquí
 
     function registrarDatos() {
@@ -47,7 +46,8 @@
 
             fetch('https://script.google.com/macros/s/AKfycbzuk53CV8U8GHfwuBX3uh0RpkjSQutnxt1eTHGUMeXRZrqg9f-NIs62Hij9UyOnfr2t/exec', {
               method: 'POST',
-              body: formData
+              body: formData,
+              mode: 'cors' // Agrega esto para que la solicitud se maneje como CORS
             })
               .then(response => response.text())
               .then(result => console.log('Datos enviados:', result))
@@ -71,4 +71,5 @@
   <button id="registrar">Registrar Ubicación</button>
 </body>
 </html>
+
 
