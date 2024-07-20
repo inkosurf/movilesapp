@@ -5,59 +5,105 @@
   <script>
     const ZONA = 'centro1'; // Ajusta el nombre de la zona aquí
 
-    function registrarDatos() {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        const latitud = position.coords.latitude;
-        const longitud = position.coords.longitude;
-        const fechaHora = new Date().toLocaleString();
-        const datos = {
-          fechaHora: fechaHora,
-          latitud: latitud,
-          longitud: longitud,
-          zona: ZONA
+    // Abre o crea una base de datos IndexedDB
+    function openDatabase() {
+      const request = indexedDB.open('registroDatos', 1);
+      request.onupgradeneeded = function(event) {
+        const db = event.target.result;
+        db.createObjectStore('registros', { keyPath: 'id', autoIncrement: true });
+      };
+      return new Promise((resolve, reject) => {
+        request.onsuccess = function(event) {
+          resolve(event.target.result);
         };
-
-        // Guarda los datos en localStorage
-        let registros = localStorage.getItem('registros');
-        if (!registros) {
-          registros = [];
-        } else {
-          registros = JSON.parse(registros);
-        }
-        registros.push(datos);
-        localStorage.setItem('registros', JSON.stringify(registros));
-
-        alert('Datos registrados correctamente.');
-        enviarDatos(); // Intentar enviar los datos inmediatamente
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
       });
     }
 
-    function enviarDatos() {
+    // Guarda los datos en IndexedDB
+    async function guardarDatos(latitud, longitud, fechaHora, zona) {
+      const db = await openDatabase();
+      const transaction = db.transaction('registros', 'readwrite');
+      const store = transaction.objectStore('registros');
+      store.add({ fechaHora, latitud, longitud, zona });
+
+      transaction.oncomplete = function() {
+        console.log('Datos guardados en IndexedDB');
+      };
+      transaction.onerror = function(event) {
+        console.error('Error al guardar datos en IndexedDB:', event.target.error);
+      };
+    }
+
+    // Recupera los datos de IndexedDB
+    async function recuperarDatos() {
+      const db = await openDatabase();
+      const transaction = db.transaction('registros', 'readonly');
+      const store = transaction.objectStore('registros');
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = function(event) {
+          resolve(event.target.result);
+        };
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Envia datos al servidor y borra los datos de IndexedDB
+    async function enviarDatos() {
       if (navigator.onLine) {
-        let registros = localStorage.getItem('registros');
-        if (registros) {
-          registros = JSON.parse(registros);
-          registros.forEach((registro) => {
+        const datos = await recuperarDatos();
+        if (datos.length > 0) {
+          datos.forEach(async (registro) => {
             const formData = new FormData();
             formData.append('fechaHora', registro.fechaHora);
             formData.append('latitud', registro.latitud);
             formData.append('longitud', registro.longitud);
             formData.append('zona', registro.zona);
 
-            fetch('https://script.google.com/macros/s/AKfycbzzsbAe3IYX3kX_LS3iKQhg7Gz4xAtCoxPKkVspxqwr1yFtYokL_msVopgNsA4XK_g/exec', {
-              method: 'POST',
-              body: formData,
-              mode: 'cors' // Agrega esto para que la solicitud se maneje como CORS
-            })
-              .then(response => response.text())
-              .then(result => console.log('Datos enviados:', result))
-              .catch(error => console.error('Error enviando los datos:', error));
+            try {
+              const response = await fetch('https://script.google.com/macros/s/AKfycbzzsbAe3IYX3kX_LS3iKQhg7Gz4xAtCoxPKkVspxqwr1yFtYokL_msVopgNsA4XK_g/exec', {
+                method: 'POST',
+                body: formData,
+                mode: 'cors'
+              });
+              console.log('Datos enviados:', await response.text());
+            } catch (error) {
+              console.error('Error enviando los datos:', error);
+            }
           });
-          localStorage.removeItem('registros'); // Limpiar registros después de enviarlos
+
+          // Borra los datos después de enviar
+          const db = await openDatabase();
+          const transaction = db.transaction('registros', 'readwrite');
+          const store = transaction.objectStore('registros');
+          store.clear();
+
+          transaction.oncomplete = function() {
+            console.log('Datos borrados de IndexedDB');
+          };
+          transaction.onerror = function(event) {
+            console.error('Error al borrar datos de IndexedDB:', event.target.error);
+          };
         }
       } else {
         console.log('No hay conexión a internet.');
       }
+    }
+
+    function registrarDatos() {
+      navigator.geolocation.getCurrentPosition(async function(position) {
+        const latitud = position.coords.latitude;
+        const longitud = position.coords.longitude;
+        const fechaHora = new Date().toLocaleString();
+        await guardarDatos(latitud, longitud, fechaHora, ZONA);
+        alert('Datos registrados correctamente.');
+        enviarDatos(); // Intentar enviar los datos inmediatamente
+      });
     }
 
     window.onload = function() {
@@ -71,5 +117,3 @@
   <button id="registrar">Registrar Ubicación</button>
 </body>
 </html>
-
-
